@@ -1,0 +1,66 @@
+<resources>
+    <string name="app_name">VocalX</string>
+    
+    <!-- Main Screen -->
+    <string name="main_title">VocalX - Offline Music Processing</string>
+    <string name="import_audio">Import Audio File</string>
+    <string name="separate_stems">Separate Stems</string>
+    <string name="extract_karaoke">Extract Karaoke</string>
+    <string name="extract_music">Extract Music</string>
+    <string name="analyze_audio">Analyze Audio</string>
+    
+    <!-- Processing -->
+    <string name="processing_loading">Loading audio file...</string>
+    <string name="processing_normalizing">Normalizing audio...</string>
+    <string name="processing_model">Initializing stem separation model...</string>
+    <string name="processing_stems">Processing stems...</string>
+    <string name="processing_finalizing">Finalizing output...</string>
+    <string name="processing_complete">Complete!</string>
+    
+    <!-- File Types -->
+    <string name="supported_formats">Supported formats: MP3, WAV, FLAC, M4A, OGG</string>
+    
+    <!-- Errors -->
+    <string name="error_file_not_found">Audio file not found</string>
+    <string name="error_processing_failed">Processing failed</string>
+    <string name="error_unknown">Unknown error</string>
+    <string name="error_import_failed">Failed to import audio file</string>
+    
+    <!-- Success -->
+    <string name="success_imported">Audio file imported successfully</string>
+    <string name="success_deleted">Audio file deleted</string>
+    <string name="success_cache_cleared">Cache cleared</string>
+    
+    <!-- Permissions -->
+    <string name="permission_storage_title">Storage Permission Required</string>
+    <string name="permission_storage_message">VocalX needs access to your storage to import and process audio files.</string>
+    <string name="permission_grant">Grant Permission</string>
+    <string name="permission_denied">Permission denied. Some features may not work properly.</string>
+    
+    <!-- Stems -->
+    <string name="stem_vocals">Vocals</string>
+    <string name="stem_drums">Drums</string>
+    <string name="stem_bass">Bass</string>
+    <string name="stem_other">Other</string>
+    
+    <!-- Analysis -->
+    <string name="analysis_bpm">BPM: %.1f</string>
+    <string name="analysis_key">Key: %s</string>
+    <string name="analysis_energy">Energy: %.1f%%</string>
+    <string name="analysis_danceability">Danceability: %.1f%%</string>
+    <string name="analysis_acousticness">Acousticness: %.1f%%</string>
+    <string name="analysis_instrumentalness">Instrumentalness: %.1f%%</string>
+    <string name="analysis_loudness">Loudness: %.1f dB</string>
+    
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_quality">Processing Quality</string>
+    <string name="settings_gpu">Enable GPU Acceleration</string>
+    <string name="settings_normalize">Normalize Output</string>
+    <string name="settings_clear_cache">Clear Cache</string>
+    
+    <!-- About -->
+    <string name="about_title">About VocalX</string>
+    <string name="about_description">VocalX is an offline music processing app that separates audio into stems using AI technology.</string>
+    <string name="about_version">Version %s</string>
+</resources>

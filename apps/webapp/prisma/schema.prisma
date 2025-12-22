@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  name              String?
+  passwordHash      String?  @map("password_hash")
+  avatarUrl         String?  @map("avatar_url")
+  subscriptionTier  String   @default("free") @map("subscription_tier")
+  stripeCustomerId  String?  @map("stripe_customer_id")
+  usageLimit        Int      @default(10) @map("usage_limit")
+  usageUsed         Int      @default(0) @map("usage_used")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
+
+  files             File[]
+  processingJobs    ProcessingJob[]
+  subscriptions     Subscription[]
+  apiKeys           ApiKey[]
+  usage             UserUsage[]
+
+  @@map("users")
+}
+
+model File {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  originalFilename String   @map("original_filename")
+  fileType         String   @map("file_type")
+  fileSize         BigInt   @map("file_size")
+  s3Key            String   @map("s3_key")
+  durationSeconds  Int?     @map("duration_seconds")
+  status           String   @default("uploaded")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user             User     @relation(fields: [userId], references: [id])
+  jobs             ProcessingJob[]
+  processedFiles   ProcessedFile[]
+
+  @@index([userId])
+  @@map("files")
+}
+
+model ProcessingJob {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  fileId         String   @map("file_id")
+  paperspaceJobId String? @unique @map("paperspace_job_id")
+  promptType     String   @map("prompt_type")
+  promptData     Json?    @map("prompt_data")
+  status         String   @default("queued")
+  progress       Int      @default(0)
+  outputS3Key    String?  @map("output_s3_key")
+  errorMessage   String?  @map("error_message")
+  startedAt      DateTime? @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user           User     @relation(fields: [userId], references: [id])
+  file           File     @relation(fields: [fileId], references: [id])
+  processed      ProcessedFile?
+
+  @@index([userId])
+  @@index([status])
+  @@map("processing_jobs")
+}
+
+model ProcessedFile {
+  id               String   @id @default(uuid())
+  jobId            String   @unique @map("job_id")
+  fileId           String   @map("file_id")
+  targetAudioS3Key String?  @map("target_audio_s3_key")
+  residualAudioS3Key String? @map("residual_audio_s3_key")
+  qualityScore     Float?   @map("quality_score")
+  durationSeconds  Int?     @map("duration_seconds")
+  fileSize         BigInt?  @map("file_size")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  job              ProcessingJob @relation(fields: [jobId], references: [id])
+  file             File          @relation(fields: [fileId], references: [id])
+
+  @@map("processed_files")
+}
+
+model UserUsage {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  monthYear     String?  @map("month_year")
+  minutesUsed   Int      @default(0) @map("minutes_used")
+  filesProcessed Int     @default(0) @map("files_processed")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("user_usage")
+}
+
+model Subscription {
+  id                   String   @id @default(uuid())
+  userId               String   @map("user_id")
+  stripeSubscriptionId String?  @map("stripe_subscription_id")
+  tier                 String
+  status               String   @default("active")
+  currentPeriodStart   DateTime? @map("current_period_start")
+  currentPeriodEnd     DateTime? @map("current_period_end")
+  amountCents          Int?     @map("amount_cents")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  user                 User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("subscriptions")
+}
+
+model ApiKey {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  keyHash    String   @unique @map("key_hash")
+  name       String?
+  lastUsedAt DateTime? @map("last_used_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@map("api_keys")
+}
+
+

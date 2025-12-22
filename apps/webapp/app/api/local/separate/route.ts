@@ -1,0 +1,83 @@
+import { env } from "@/lib/env";
+
+function jsonError(status: number, message: string, details?: unknown) {
+  return Response.json({ ok: false, error: message, details }, { status });
+}
+
+export async function POST(req: Request) {
+  if (!env.LOCAL_WORKER_URL) {
+    return jsonError(
+      400,
+      "LOCAL_WORKER_URL is not configured",
+      "Set LOCAL_WORKER_URL=http://localhost:8000 (or your worker host) and restart the webapp."
+    );
+  }
+
+  const form = await req.formData().catch(() => null);
+  if (!form) return jsonError(400, "Invalid form data");
+
+  const file = form.get("file");
+  const description = String(form.get("description") ?? "");
+  const anchorsJson = String(form.get("anchorsJson") ?? "");
+  const which = String(form.get("which") ?? "target"); // target | residual
+
+  if (!(file instanceof File)) return jsonError(400, "Missing file");
+
+  const workerUrl = env.LOCAL_WORKER_URL.replace(/\/+$/, "");
+  const fd = new FormData();
+  fd.set("audio", file, file.name);
+  fd.set("description", description);
+  if (anchorsJson.trim()) fd.set("anchors_json", anchorsJson);
+  fd.set("predict_spans", "false");
+  fd.set("reranking_candidates", "0");
+
+  const url = `${workerUrl}/sam_audio/separate`;
+  let res: Response;
+  try {
+    res = await fetch(url, { method: "POST", body: fd });
+  } catch (e) {
+    return jsonError(502, "Worker unreachable", {
+      tried: url,
+      error: String(e),
+      hint:
+        "If you're running the worker in WSL, it may have crashed (OOM) when loading SAM-Audio. " +
+        "Check the worker logs and consider increasing WSL2 memory/swap or using a larger machine.",
+    });
+  }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    return jsonError(502, "Worker error", text || `${res.status} ${res.statusText}`);
+  }
+
+  const json = await res.json().catch(() => null);
+  if (!json?.ok) {
+    return jsonError(502, "Worker returned invalid response", json);
+  }
+
+  const base64Key =
+    which === "residual" ? ("residual_wav_base64" as const) : ("target_wav_base64" as const);
+  const b64 = json[base64Key];
+  if (typeof b64 !== "string" || !b64.length) {
+    return jsonError(
+      502,
+      "Worker did not return WAV base64",
+      json?.warning ?? "Make sure `torchaudio` is installed in the worker and SAM-Audio is working."
+    );
+  }
+
+  const wavBytes = Buffer.from(b64, "base64");
+  const safeBase = (file.name || "audio").replace(/[^\w.\-]+/g, "_").slice(0, 64);
+  const outName = `${safeBase}.${which}.wav`;
+
+  return new Response(wavBytes, {
+    status: 200,
+    headers: {
+      "content-type": "audio/wav",
+      "content-disposition": `attachment; filename="${outName}"`,
+      "cache-control": "no-store",
+    },
+  });
+}
+
+

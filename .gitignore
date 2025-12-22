@@ -1,0 +1,52 @@
+# Node / JS
+node_modules/
+.turbo/
+.next/
+dist/
+.env
+.env.*
+
+# Python / worker venvs (local-only, never commit)
+.venv/
+venv/
+infrastructure/paperspace/worker/.venv-wsl/
+__pycache__/
+*.pyc
+
+# Expo / RN
+.expo/
+*.keystore
+*.jks
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Android (existing native project)
+**/build/
+local.properties
+
+
+
+# OpenMemory - IDE/Assistant specific rules
+.cursor\rules\openmemory.mdc
+
+# Cursor IDE project files (local-only)
+.cursor/
+
+# Notebook checkpoints (local-only)
+.checkpoints/
+
+# Large local model weights (do not commit)
+apps/webapp/Models/
+.cursor\rules\openmemory.mdc
+
+# Large model checkpoints (do not commit)
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx

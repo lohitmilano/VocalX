@@ -1,0 +1,15 @@
+# Never commit model weights or large artifacts
+models/**
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.engine
+*.tflite
+
+# Logs / caches
+logs/
+tmp/
+
+

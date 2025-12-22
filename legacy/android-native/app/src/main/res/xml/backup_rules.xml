@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="cache" />
+    <exclude domain="file" path="stems/" />
+    <exclude domain="file" path="temp/" />
+    <exclude domain="file" path="*.tmp" />
+    <exclude domain="sharedpref" path="device_prefs.xml" />
+</full-backup-content>
