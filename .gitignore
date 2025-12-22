@@ -50,3 +50,4 @@ apps/webapp/Models/
 *.ckpt
 *.safetensors
 *.onnx
+.cursor\rules\openmemory.mdc

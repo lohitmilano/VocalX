@@ -15,6 +15,9 @@ safetensors>=0.4.5
 # Install it per the official SAM-Audio docs (may require a git install / gated access).
 # sam-audio
 
+# Memory monitoring for RAM checks
+psutil>=6.0.0
+
 
 
 
