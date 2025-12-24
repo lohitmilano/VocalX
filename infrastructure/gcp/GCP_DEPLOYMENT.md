@@ -56,6 +56,15 @@ We will expose:
 - Webapp: **80/443** (browser access)
 - Worker: **443** (only you / or only the webapp)
 
+> **Important (your error)**: Your project has an organization policy that blocks VM external IPs:
+> `constraints/compute.vmExternalIpAccess`.
+> That means **you cannot create VMs with public IPs**.
+>
+> For a 1-user MVP this is totally fine. We’ll use:
+> - **IAP** (Identity-Aware Proxy) to SSH into VMs (no external IP needed)
+> - **Internal IPs** for webapp → worker communication
+> - Optionally, later, you can add a Load Balancer if you want public access.
+
 ### 2.1 Webapp firewall (HTTP/HTTPS)
 Allow TCP 80/443 to the webapp VM:
 
@@ -68,17 +77,62 @@ gcloud compute firewall-rules create vocalx-web-allow-http \
 ```
 
 ### 2.2 Worker firewall (HTTPS only; lock down)
-For MVP, expose the worker only to **your IP** (most secure for a single user).
+For MVP, expose the worker only to the **webapp VM** (so nothing depends on your home IP).
 
-1. Find your public IP by searching “what is my ip”.
-2. Replace `YOUR_PUBLIC_IP` below:
+We do this by:
+1) giving the webapp VM a **static external IP**, and  
+2) allowing the worker to accept HTTPS traffic **only from that static IP**.
+
+#### Step A — Reserve a static external IP for the webapp VM
+Run in Cloud Shell:
+
+```bash
+gcloud compute addresses create vocalx-webapp-ip \
+  --region=us-central1
+gcloud compute addresses describe vocalx-webapp-ip \
+  --region=us-central1 \
+  --format="get(address)"
+```
+
+Copy the printed IP address (this is your **webapp static IP**).
+
+#### Step B — Create the worker firewall rule (allow only the webapp static IP)
+Replace `WEBAPP_STATIC_IP` below (example: `203.0.113.10`):
 
 ```bash
 gcloud compute firewall-rules create vocalx-worker-allow-https \
   --allow tcp:443 \
   --direction INGRESS \
   --target-tags vocalx-worker \
-  --source-ranges YOUR_PUBLIC_IP/32
+  --source-ranges WEBAPP_STATIC_IP/32
+```
+
+> If you later put the webapp behind a load balancer or Cloudflare, the source IP will change. For this MVP, a static VM IP is the simplest.
+
+### 2.3 If external IPs are blocked (recommended for your project)
+
+Because your project blocks external IPs, do this instead:
+
+#### Step A — Allow IAP to SSH into VMs
+IAP’s IP range is `35.235.240.0/20`.
+
+```bash
+gcloud compute firewall-rules create vocalx-allow-iap-ssh \
+  --allow tcp:22 \
+  --direction INGRESS \
+  --target-tags vocalx-web,vocalx-worker \
+  --source-ranges 35.235.240.0/20
+```
+
+#### Step B — Allow the webapp VM to call the worker VM (internal network)
+We’ll run the worker on port **8000** internally (no public exposure).
+
+```bash
+gcloud compute firewall-rules create vocalx-worker-allow-internal \
+  --allow tcp:8000 \
+  --direction INGRESS \
+  --target-tags vocalx-worker \
+  --source-tags vocalx-web
 ```
 
 ---
@@ -86,25 +140,27 @@ gcloud compute firewall-rules create vocalx-worker-allow-https \
 ## 3) Create the Webapp VM (CPU) (and host MongoDB on it)
 
 ### Recommended machine type (minimal)
-- **`e2-small`** (2 vCPU, 2 GB RAM) can work for 1 user, but may be tight during builds.
-- **`e2-medium`** (2 vCPU, 4 GB RAM) is the safer “minimal” choice.
+- **Cheapest that still works**: `e2-small` (2 vCPU, 2 GB RAM)
+  - Fine for 1 user if you’re patient.
+  - Tip: do not run heavy builds repeatedly on the VM; prefer building locally or use Cloud Build later.
 
-We’ll use `e2-medium` and Ubuntu 22.04.
+We’ll use `e2-small` and Ubuntu 22.04.
 
 ```bash
 gcloud compute instances create vocalx-webapp \
   --zone=us-central1-a \
-  --machine-type=e2-medium \
+  --machine-type=e2-small \
   --image-family=ubuntu-2204-lts \
   --image-project=ubuntu-os-cloud \
   --tags=vocalx-web \
-  --boot-disk-size=50GB
+  --boot-disk-size=30GB \
+  --no-address
 ```
 
 SSH in:
 
 ```bash
-gcloud compute ssh vocalx-webapp --zone=us-central1-a
+gcloud compute ssh vocalx-webapp --zone=us-central1-a --tunnel-through-iap
 ```
 
 ### 3.1 Install Node 20 + build tools
@@ -261,13 +317,14 @@ gcloud compute instances create vocalx-worker \
   --image-project=ubuntu-os-cloud \
   --tags=vocalx-worker \
   --boot-disk-size=200GB \
-  --maintenance-policy=TERMINATE
+  --maintenance-policy=TERMINATE \
+  --no-address
 ```
 
 SSH in:
 
 ```bash
-gcloud compute ssh vocalx-worker --zone=us-central1-a
+gcloud compute ssh vocalx-worker --zone=us-central1-a --tunnel-through-iap
 ```
 
 ### 4.1 Install NVIDIA driver + Docker (recommended)
